@@ -1,5 +1,5 @@
 # Dr. Jitendra Kumar
 
-![alt text](https://github.com/[jitendrakv]/[jitendrakv.github.io]/blob/[main]/jitendra.jpg?raw=true)
+![alt text](https://github.com/jitendrakv/jitendrakv.github.io/blob/main/jitendra.jpg)
 
 Dr. Jitendra Kumar is with the Department of Computer Applications, National Institute of Technology Tiruchirappally, Tamilnadu, India (_an institution of national importance_) since 2020. His current research interests include **Machine Learning**, **Cloud Computing**, **Forecasting**. He has more than five years of diverse experience in industry and academia. Dr. Kumar received his doctorate degree in Machine Learning from National Institute of Technology Kurukshetra, Haryana, India in 2019 and M.Tech in Computer Science from Dayalbagh Educational Institute, Agra, India in 2013. He has published more the 25 research papers in reputed SCI indexed Journals and conferences. He is an active member of Cloud Computing Community, IEEE and also review board member of various journal of repute like ‘IEEE Transactions on Parallel and Distributed Systems’, ‘IEEE Systems Journal’, ‘Future Generation Computer Systems’, ‘IEEE Access’ etc. 
