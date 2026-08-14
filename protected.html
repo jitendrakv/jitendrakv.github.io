@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+<title>Protected Resources — Dr. Jitendra Kumar</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700https://fonts.googleapis.com/css2?family=Lora:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500&display=swapfamily=Inter:wght@400;500;600;700https://fonts.googleapis.com/css2?family=Lora:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500&display=swapdisplay=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<nav class="site-nav">
+  <div class="wrap">
+    <a class="brand" href="index.html">Jitendra <span>Kumar</span></a>
+    <ul class="nav-links">
+      <li><a href="index.html">Home</a></li>
+      <li><a href="experience.html">Experience</a></li>
+      <li><a href="teaching.html">Teaching</a></li>
+      <li><a href="publications.html">Publications</a></li>
+      <li><a href="students-current.html">Students</a></li>
+      <li><a href="awards.html">Awards</a></li>
+      <li><a href="news.html">News</a></li>
+      <li><a class="active" href="resources.html">Resources</a></li>
+      <li><a href="contact.html">Contact</a></li>
+      <li><a class="cv-link" href="assets/CV_Jitendra_Kumar.pdf" target="_blank" rel="noopener">CV ↓</a></li>
+    </ul>
+    <button class="nav-toggle" aria-label="Toggle menu">☰</button>
+  </div>
+</nav>
+
+<header class="page-hero">
+  <div class="wrap">
+    <div class="eyebrow">Restricted</div>
+    <h1>Protected Resources</h1>
+    <p>Course materials shared with enrolled students.</p>
+  </div>
+</header>
+
+<section>
+  <div class="wrap">
+    <div id="protected-gate">
+      <form class="protected-form" id="protected-form">
+        <h3>Enter password to view</h3>
+        <input type="password" id="protected-password" placeholder="Password" autocomplete="off">
+        <div class="protected-error" id="protected-error">Incorrect password — please try again.</div>
+        <button class="btn solid" type="submit">Unlock</button>
+      </form>
+      <p class="protected-note">Note: this is a simple deterrent, not real security — anyone viewing this page's source can bypass it. Don't put anything genuinely sensitive here.</p>
+    </div>
+
+    <div id="protected-content" style="display:none;">
+      <div class="resource-block">
+        <h3>Data Structures</h3>
+        <ul>
+          <li><a href="https://drive.google.com/file/d/1-7dIjnCcFrvlnCCXHRn5XUSQ59ObWxJj/view?usp=drive_link" target="_blank" rel="noopener">Array</a></li>
+          <li><a href="https://drive.google.com/file/d/1-8nU0R_zQCUmDMsMa569RNb47ElKHnIh/view?usp=drive_link" target="_blank" rel="noopener">R-B Tree</a></li>
+          <li><a href="https://drive.google.com/file/d/1CT74wRM3Y659sTrZJtE9dn_nS7akZQTG/view?usp=drive_link" target="_blank" rel="noopener">Heapsort</a></li>
+        </ul>
+      </div>
+      <div class="resource-block">
+        <h3>Computer Networks</h3>
+        <ul><li>Coming soon...</li></ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    Jitendra © 2026. Built with care — hosted on GitHub Pages.
+  </div>
+</footer>
+
+<script src="script.js"></script>
+</body>
+</html>

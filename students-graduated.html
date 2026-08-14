@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+<title>Graduated Students — Dr. Jitendra Kumar</title>
+<meta name="description" content="Graduated PhD, Masters, Undergraduate students, and research interns supervised by Dr. Jitendra Kumar.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700https://fonts.googleapis.com/css2?family=Lora:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500&display=swapfamily=Inter:wght@400;500;600;700https://fonts.googleapis.com/css2?family=Lora:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500&display=swapdisplay=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<nav class="site-nav">
+  <div class="wrap">
+    <a class="brand" href="index.html">Jitendra <span>Kumar</span></a>
+    <ul class="nav-links">
+      <li><a href="index.html">Home</a></li>
+      <li><a href="experience.html">Experience</a></li>
+      <li><a href="teaching.html">Teaching</a></li>
+      <li><a href="publications.html">Publications</a></li>
+      <li><a class="active" href="students-current.html">Students</a></li>
+      <li><a href="awards.html">Awards</a></li>
+      <li><a href="news.html">News</a></li>
+      <li><a href="resources.html">Resources</a></li>
+      <li><a href="contact.html">Contact</a></li>
+      <li><a class="cv-link" href="assets/CV_Jitendra_Kumar.pdf" target="_blank" rel="noopener">CV ↓</a></li>
+    </ul>
+    <button class="nav-toggle" aria-label="Toggle menu">☰</button>
+  </div>
+</nav>
+
+<header class="page-hero">
+  <div class="wrap">
+    <div class="eyebrow">Mentorship</div>
+    <h1>Graduated Students</h1>
+    <p>Doctoral, master's, and undergraduate students who have completed their research under my supervision, plus past research interns.</p>
+  </div>
+</header>
+
+<section>
+  <div class="wrap">
+    <div class="student-toggle">
+      <a href="students-current.html">Current Students</a>
+      <a class="active" href="students-graduated.html">Graduated Students</a>
+    </div>
+    <div id="student-list" data-mode="graduated"></div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    © 2026 Jitendra Kumar. Built with care — hosted on GitHub Pages.
+  </div>
+</footer>
+
+<script src="vendor/xlsx.full.min.js"></script>
+<script src="script.js"></script>
+</body>
+</html>
