@@ -523,8 +523,35 @@ function renderNewsFull(rows){
 function renderNewsPreview(rows, count){
   const container = document.getElementById("news-preview");
   if (!container) return;
+
+  // Home page "Updates": auto-scrolling ticker (marquee, bottom-to-top) of the most recent items.
   rows.sort((a, b) => (Number(b.Year) || 0) - (Number(a.Year) || 0));
-  container.innerHTML = `<ol class="news-ol">${rows.slice(0, count).map(newsItemHtml).join("")}</ol>`;
+  const recent = rows.slice(0, count);
+  if (!recent.length){
+    container.innerHTML = `<div class="no-results">No updates yet.</div>`;
+    return;
+  }
+  const itemHtml = (n, i) => {
+    const headline = n.Link
+      ? `<a href="${n.Link}" target="_blank" rel="noopener">${n.Headline}</a>`
+      : `<i>${n.Headline}</i>`;
+    return `<div class="news-ticker-item"><span class="news-num">${i + 1}.</span> ${headline} ${n.Detail}</div>`;
+  };
+  // duplicate the list so the CSS animation (translateY -50%) loops seamlessly
+  const once = recent.map(itemHtml).join("");
+  const secondsPerItem = 5.5;
+  const duration = Math.max(recent.length * secondsPerItem, 14);
+  container.innerHTML = `
+    <div class="news-ticker">
+      <div class="news-ticker-track" style="animation-duration:${duration}s;">
+        ${once}
+        ${once}
+      </div>
+    </div>
+    <div class="page-links" style="margin-top:18px;">
+      <a href="news.html">Show more...</a>
+    </div>
+  `;
 }
 
 function initNews(){
@@ -538,41 +565,86 @@ function initNews(){
   }, "news");
 }
 
-/* ---------------- Metrics chart (citations / publications per year) ---------------- */
+/* ---------------- Metrics chart (citations / publications per year) ----------------
+   Reads data/metrics.xlsx (Year, Citations, Publications) and draws a dual-axis
+   line chart with Chart.js — Publications on the left axis, Citations on the right,
+   matching the reference site's layout. Falls back to a plain table if Chart.js
+   didn't load (e.g. offline / CDN blocked). */
 function renderMetricsChart(rows){
   const container = document.getElementById("metrics-chart");
   if (!container) return;
   rows.sort((a, b) => (Number(a.Year) || 0) - (Number(b.Year) || 0));
 
-  const W = 720, H = 260, PAD_L = 46, PAD_R = 16, PAD_T = 16, PAD_B = 30;
-  const plotW = W - PAD_L - PAD_R, plotH = H - PAD_T - PAD_B;
+  const years = rows.map(r => r.Year);
+  const citations = rows.map(r => Number(r.Citations) || 0);
+  const publications = rows.map(r => Number(r.Publications) || 0);
 
-  const maxC = Math.max(...rows.map(r => Number(r.Citations) || 0), 1);
-  const maxP = Math.max(...rows.map(r => Number(r.Publications) || 0), 1);
-
-  const x = i => PAD_L + (i / (rows.length - 1)) * plotW;
-  const yC = v => PAD_T + plotH - (v / maxC) * plotH;
-  const yP = v => PAD_T + plotH - (v / maxP) * plotH;
-
-  const citLine = rows.map((r, i) => `${x(i)},${yC(Number(r.Citations) || 0)}`).join(" ");
-  const pubLine = rows.map((r, i) => `${x(i)},${yP(Number(r.Publications) || 0)}`).join(" ");
-
-  const labels = rows.map((r, i) => (i % 2 === 0 || rows.length < 10)
-    ? `<text x="${x(i)}" y="${H - 8}" font-size="10" text-anchor="middle" fill="var(--faint)">${r.Year}</text>` : "").join("");
+  if (typeof Chart === "undefined"){
+    // Offline fallback: simple data table, still fully derived from the xlsx file.
+    container.innerHTML = `
+      <div class="no-results">Chart library unavailable — showing raw data from metrics.xlsx.</div>
+      <table style="width:100%; border-collapse:collapse; margin-top:12px;">
+        <tr><th style="text-align:left;">Year</th>${years.map(y => `<td style="text-align:center;">${y}</td>`).join("")}</tr>
+        <tr><th style="text-align:left;">Publications</th>${publications.map(v => `<td style="text-align:center;">${v}</td>`).join("")}</tr>
+        <tr><th style="text-align:left;">Citations</th>${citations.map(v => `<td style="text-align:center;">${v}</td>`).join("")}</tr>
+      </table>`;
+    return;
+  }
 
   container.innerHTML = `
-    <svg viewBox="0 0 ${W} ${H}" class="metrics-svg">
-      <line x1="${PAD_L}" y1="${PAD_T}" x2="${PAD_L}" y2="${H-PAD_B}" stroke="var(--line-2)" />
-      <line x1="${PAD_L}" y1="${H-PAD_B}" x2="${W-PAD_R}" y2="${H-PAD_B}" stroke="var(--line-2)" />
-      <polyline points="${citLine}" fill="none" stroke="var(--accent)" stroke-width="2.2" />
-      <polyline points="${pubLine}" fill="none" stroke="#333" stroke-width="2" stroke-dasharray="4 3" />
-      ${labels}
-    </svg>
-    <div class="metrics-legend">
-      <span><i class="dot" style="background:var(--accent)"></i> Citations (cumulative)</span>
-      <span><i class="dot dash"></i> Publications / year</span>
+    <div class="metrics-chart-wrap">
+      <canvas id="metrics-canvas" height="120"></canvas>
     </div>
+    <div class="metrics-source-note">Auto-generated from data/metrics.xlsx</div>
   `;
+  const ctx = document.getElementById("metrics-canvas").getContext("2d");
+  new Chart(ctx, {
+    type: "line",
+    data: {
+      labels: years,
+      datasets: [
+        {
+          label: "Publications",
+          data: publications,
+          borderColor: "#e67e22",
+          backgroundColor: "#e67e22",
+          pointBackgroundColor: "#e67e22",
+          pointRadius: 4,
+          tension: 0.25,
+          yAxisID: "yPub"
+        },
+        {
+          label: "Citations",
+          data: citations,
+          borderColor: "#8e44ad",
+          backgroundColor: "#8e44ad",
+          pointBackgroundColor: "#8e44ad",
+          pointRadius: 4,
+          tension: 0.25,
+          yAxisID: "yCit"
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      interaction: { mode: "index", intersect: false },
+      plugins: {
+        legend: { position: "bottom", labels: { boxWidth: 14, usePointStyle: true } }
+      },
+      scales: {
+        x: { title: { display: true, text: "Year" }, grid: { display: false } },
+        yPub: {
+          type: "linear", position: "left", beginAtZero: true,
+          title: { display: true, text: "Publication (#)" }
+        },
+        yCit: {
+          type: "linear", position: "right", beginAtZero: true,
+          title: { display: true, text: "Citation (#)" },
+          grid: { drawOnChartArea: false }
+        }
+      }
+    }
+  });
 }
 
 function initMetrics(){
