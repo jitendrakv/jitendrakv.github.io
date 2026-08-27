@@ -1,12 +1,12 @@
 # Dr. Jitendra Kumar — Portfolio Website
 
-Plain HTML/CSS/JS, no build step, no framework. White background, maroon (`#8a1f2b`) accent, Lora (serif headings) + Inter (body). Content matches your original React site (real bio, real publications, real students, real timeline, real news/awards/teaching), rebuilt as a static site where **almost everything is Excel-driven** — no code editing needed for day-to-day updates.
+Plain HTML/CSS/JS, no build step, no framework. White background, maroon (`#8a1f2b`) accent, Inter throughout. Content matches your original React site (real bio, real publications, real students, real timeline, real news/awards/teaching), rebuilt as a static site where **almost everything is Excel-driven** — no code editing needed for day-to-day updates.
 
 ## Pages
 
 ```
-index.html                → Home: bio, social links, career timeline preview, recent publications,
-                             citations/publications chart, recent news
+index.html                → Home: intro (name/role/photo), bio, News feed,
+                             Experience timeline preview, citations/publications chart
 experience.html            → Full career timeline (data/experience.xlsx)
 teaching.html               → Courses taught, current + previous (data/teaching.xlsx)
 publications.html           → Full searchable/filterable publication list (data/publications.xlsx)

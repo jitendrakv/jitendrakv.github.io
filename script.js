@@ -441,7 +441,7 @@ function initExperience(){
   const target = full || preview;
   withLoading(target, () => loadSheet("data/experience.xlsx", "Experience"), (rows) => {
     if (full) renderExperience(rows, { containerId: "experience-list" });
-    if (preview) renderExperience(rows, { containerId: "experience-preview", limit: 5 });
+    if (preview) renderExperience(rows, { containerId: "experience-preview", limit: 3 });
   }, "experience");
 }
 
@@ -531,26 +531,15 @@ function renderNewsPreview(rows, count){
     container.innerHTML = `<div class="no-results">No updates yet.</div>`;
     return;
   }
-  const itemHtml = (n, i) => {
+  const itemHtml = (n) => {
     const headline = n.Link
       ? `<a href="${n.Link}" target="_blank" rel="noopener">${n.Headline}</a>`
-      : `<i>${n.Headline}</i>`;
-    return `<div class="news-ticker-item"><span class="news-num">${i + 1}.</span> ${headline} ${n.Detail}</div>`;
+      : `<span class="u-head">${n.Headline}</span>`;
+    return `<li class="update-item"><span class="u-type">${n.Type}</span><div class="u-body">${headline} <span class="u-detail">${n.Detail}</span></div></li>`;
   };
-  // duplicate the list so the CSS animation (translateY -50%) loops seamlessly
-  const once = recent.map(itemHtml).join("");
-  const secondsPerItem = 5.5;
-  const duration = Math.max(recent.length * secondsPerItem, 14);
   container.innerHTML = `
-    <div class="news-ticker">
-      <div class="news-ticker-track" style="animation-duration:${duration}s;">
-        ${once}
-        ${once}
-      </div>
-    </div>
-    <div class="page-links" style="margin-top:18px;">
-      <a href="news.html">Show more...</a>
-    </div>
+    <ul class="updates-list">${recent.map(itemHtml).join("")}</ul>
+    <div class="page-links" style="margin-top:18px;"><a href="news.html">Show more...</a></div>
   `;
 }
 
@@ -606,9 +595,9 @@ function renderMetricsChart(rows){
         {
           label: "Publications",
           data: publications,
-          borderColor: "#e67e22",
-          backgroundColor: "#e67e22",
-          pointBackgroundColor: "#e67e22",
+          borderColor: "#8a1f2b",
+          backgroundColor: "#8a1f2b",
+          pointBackgroundColor: "#8a1f2b",
           pointRadius: 4,
           tension: 0.25,
           yAxisID: "yPub"
@@ -616,9 +605,9 @@ function renderMetricsChart(rows){
         {
           label: "Citations",
           data: citations,
-          borderColor: "#8e44ad",
-          backgroundColor: "#8e44ad",
-          pointBackgroundColor: "#8e44ad",
+          borderColor: "#7d8590",
+          backgroundColor: "#7d8590",
+          pointBackgroundColor: "#7d8590",
           pointRadius: 4,
           tension: 0.25,
           yAxisID: "yCit"
