@@ -34,43 +34,38 @@ function cleanNum(v){
 
 function formatEntry(type, row){
   const year = row.Year || "";
-  let authors, title, venueHtml;
+  let authors, title, venueCore;
 
   if (type === "Journals"){
     authors = row.Authors; title = row.Title;
-    let vnp = [];
+    const vnp = [];
     if (row.Volume) vnp.push("Vol. " + row.Volume);
     if (row.Number) vnp.push("No. " + row.Number);
     const rest = [];
     if (vnp.length) rest.push(vnp.join(", "));
     if (row.Pages) rest.push(row.Pages);
-    if (year) rest.push(year);
-    venueHtml = `<b>${row.Journal || ""}</b>` + (rest.length ? " · " + rest.join(" · ") : "");
+    venueCore = `<b>${row.Journal || ""}</b>` + (rest.length ? " · " + rest.join(" · ") : "");
   } else if (type === "Conferences"){
     authors = row.Authors; title = row.Title;
     const rest = [];
     if (row.Place) rest.push(row.Place);
     if (row.Pages) rest.push("pp. " + row.Pages);
-    if (year) rest.push(year);
-    venueHtml = `<b>${row.Conference || ""}</b>` + (rest.length ? " · " + rest.join(" · ") : "");
+    venueCore = `<b>${row.Conference || ""}</b>` + (rest.length ? " · " + rest.join(" · ") : "");
   } else if (type === "Books"){
     authors = row["Authors/Editors"]; title = row.Title;
     const rest = [];
     if (row.Edition) rest.push(row.Edition + " Edition");
-    if (year) rest.push(year);
-    venueHtml = `<b>${row.Publisher || ""}</b>` + (rest.length ? " · " + rest.join(" · ") : "");
+    venueCore = `<b>${row.Publisher || ""}</b>` + (rest.length ? " · " + rest.join(" · ") : "");
   } else if (type === "Book Chapters"){
     authors = row.Authors; title = row["Chapter Title"];
     const rest = [];
     if (row.Pages) rest.push("pp. " + row.Pages);
-    if (year) rest.push(year);
-    venueHtml = "in " + `<b>${row["Book Title"] || ""}</b>` + (row.Publisher ? " · " + row.Publisher : "") + (rest.length ? " · " + rest.join(" · ") : "");
+    venueCore = "in " + `<b>${row["Book Title"] || ""}</b>` + (row.Publisher ? " · " + row.Publisher : "") + (rest.length ? " · " + rest.join(" · ") : "");
   } else if (type === "Reports"){
     authors = row.Authors; title = row.Title;
     const rest = [];
     if (row.Identifier) rest.push(row.Identifier);
-    if (year) rest.push(year);
-    venueHtml = `<b>${row.Repository || ""}</b>` + (rest.length ? " · " + rest.join(" · ") : "");
+    venueCore = `<b>${row.Repository || ""}</b>` + (rest.length ? " · " + rest.join(" · ") : "");
   }
 
   const link = row.Link ? String(row.Link).trim() : "";
@@ -78,7 +73,8 @@ function formatEntry(type, row){
     ? `<a href="${link}" target="_blank" rel="noopener">${title}</a>`
     : title;
 
-  return { authors, title: titleHtml, venueHtml, year: cleanNum(year) || 0 };
+  const venueHtml = venueCore + (year ? " · " + year : "");
+  return { authors, title: titleHtml, venueHtml, venueCore, year: cleanNum(year) || 0 };
 }
 
 function badgesHtml(row){
@@ -158,16 +154,20 @@ function renderPublicationsPage(data){
     combined.forEach(({ type, row }) => {
       const f = formatEntry(type, row);
       const rowEl = document.createElement("div");
-      rowEl.className = "pub-row";
+      rowEl.className = "pub-card-v";
+      const pvLink = row.Link ? String(row.Link).trim() : "";
+      const pvLinkLabel = type === "Books" ? "Publisher" : (type === "Reports" ? "Link" : "DOI");
+      const pvVenue = f.venueCore + (f.year ? " · " + f.year : "") + (row["Other Info"] ? " · " + row["Other Info"] : "");
       rowEl.innerHTML = `
-        <div class="pub-row-top">
-          <div class="authors">${f.authors}</div>
-          <span class="type-tag ${PUB_TYPE_CLASS[type]}">${PUB_TYPE_SINGULAR[type]}</span>
+        <div class="pv-spine ${PUB_TYPE_CLASS[type]}">${PUB_TYPE_SINGULAR[type]}</div>
+        <div class="pv-main">
+          <div class="pv-textcol">
+            <div class="pv-title">${f.title}</div>
+            <div class="pv-authors">${f.authors}</div>
+            <div class="pv-venue">${pvVenue}</div>
+          </div>
+          ${pvLink ? `<a class="pv-doi" href="${pvLink}" target="_blank" rel="noopener">${pvLinkLabel} ↗</a>` : ""}
         </div>
-        <div class="titletext">${f.title}</div>
-        <div class="venueline">${f.venueHtml}</div>
-        ${badgesHtml(row) ? `<div class="badges">${badgesHtml(row)}</div>` : ""}
-        ${row["Other Info"] ? `<div class="other-info">${row["Other Info"]}</div>` : ""}
       `;
       container.appendChild(rowEl);
     });
@@ -257,9 +257,97 @@ async function loadStudents(){
   const res = await fetch(STUDENTS_URL);
   if (!res.ok) throw new Error("Could not load " + STUDENTS_URL + " (HTTP " + res.status + ")");
   const buf = await res.arrayBuffer();
-  const wb = XLSX.read(buf, { type: "array" });
-  const sheetName = wb.SheetNames.includes("Students") ? "Students" : wb.SheetNames[0];
-  return XLSX.utils.sheet_to_json(wb.Sheets[sheetName], { defval: "" });
+  const wb = XLSX.read(buf, { type: "array", cellDates: true });
+  const SHEET_CATEGORY = { "PhD": "PhD", "PG": "Masters", "UG": "Undergraduate", "Interns": "Research Intern" };
+  const out = [];
+  Object.keys(SHEET_CATEGORY).forEach(sheet => {
+    if (!wb.SheetNames.includes(sheet)) return;
+    const cat = SHEET_CATEGORY[sheet];
+    const rows = XLSX.utils.sheet_to_json(wb.Sheets[sheet], { defval: "" });
+    rows.forEach(r => {
+      if (!String(r.Name || "").trim()) return;
+      out.push({
+        Category: cat,
+        Name: r.Name,
+        Program: cat === "PhD" ? "PhD" : (r.Program || ""),
+        Status: String(r.Status || "").trim(),
+        Thesis: r["Research Area / Thesis Title"] || "",
+        ThesisLink: r["Thesis Link"] || "",
+        Affiliation: r["Current Affiliation"] || r["Affiliation"] || "",
+        Image: r.Image || "",
+        Notes: r.Notes || "",
+        SupervisionTags: r["Supervision Tags"] || "",
+        Year: r.Year || "",
+        AwardDate: r["Award Date"] || ""
+      });
+    });
+  });
+  return out;
+}
+
+function studentYear(s){
+  if (s.Category === "PhD" && s.AwardDate){
+    const d = s.AwardDate;
+    if (d instanceof Date && !isNaN(d)) return d.getFullYear();
+    const m = String(d).match(/(\d{4})/); return m ? +m[1] : 0;
+  }
+  const m = String(s.Year || "").match(/(\d{4})/); return m ? +m[1] : 0;
+}
+
+function studentYearLabel(s){
+  if (s.Status === "Ongoing") return "Ongoing";
+  if (s.Category === "PhD"){ const y = studentYear(s); return y ? String(y) : ""; }
+  return s.Year ? String(s.Year) : "";
+}
+
+function escAttr(v){
+  return String(v).replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+}
+
+function studentCardHtml(s, wide){
+  const catSlug = String(s.Category||'').toLowerCase().replace(/\s+/g,'');
+  const awarded = s.Status === "Awarded" ? `<span class="s-awd">Awarded</span>` : "";
+  const topic = s.Thesis;
+  const thesisLink = s.ThesisLink ? String(s.ThesisLink).trim() : "";
+  const topicHtml = topic
+    ? (thesisLink ? `<a href="${thesisLink}" target="_blank" rel="noopener">${topic}</a>` : topic)
+    : "";
+  const imgName = s.Image ? String(s.Image).trim() : "";
+  const initials = String(s.Name || "").split(/\s+/).map(w => w[0]).slice(0, 2).join("").toUpperCase();
+  const avatar = imgName
+    ? `<img class="s-avatar" src="assets/students/${imgName}" alt="${s.Name}">`
+    : `<div class="s-avatar s-avatar-fallback">${initials}</div>`;
+  const sub = [s.Program, studentYearLabel(s)].filter(Boolean).join(" \u00b7 ");
+  const tip = [s.SupervisionTags, s.Notes].filter(Boolean).join(" \u00b7 ");
+  const titleAttr = tip ? ` title="${escAttr(tip)}"` : "";
+  const affHtml = s.Affiliation ? `<div class="s-aff"><span class="lab">Next/Now at </span>${s.Affiliation}</div>` : "";
+
+  if (wide){
+    return `
+      <div class="scard scard-wide cat-${catSlug}"${titleAttr}>
+        ${avatar}
+        <div class="s-body">
+          <div class="s-name-row">
+            <span class="s-name">${s.Name}${awarded}</span>
+            ${sub ? `<span class="s-year">${sub}</span>` : ""}
+          </div>
+          ${topicHtml ? `<div class="s-thesis-wide">${topicHtml}</div>` : ""}
+          ${affHtml}
+        </div>
+      </div>
+    `;
+  }
+  return `
+    <div class="scard cat-${catSlug}"${titleAttr}>
+      ${avatar}
+      <div class="s-body">
+        <div class="s-name">${s.Name}${awarded}</div>
+        ${sub ? `<div class="s-sub">${sub}</div>` : ""}
+        ${topicHtml ? `<div class="s-thesis">${topicHtml}</div>` : ""}
+        ${affHtml}
+      </div>
+    </div>
+  `;
 }
 
 function renderStudents(rows, mode){
@@ -278,8 +366,7 @@ function renderStudents(rows, mode){
     any = true;
 
     items.sort((a, b) => {
-      const ay = parseInt(String(a.Year).slice(0, 4)) || 0;
-      const by = parseInt(String(b.Year).slice(0, 4)) || 0;
+      const ay = studentYear(a), by = studentYear(b);
       if (by !== ay) return by - ay;
       return String(a.Name).localeCompare(String(b.Name));
     });
@@ -289,41 +376,11 @@ function renderStudents(rows, mode){
     h.innerHTML = `${STUDENT_CATEGORY_LABELS[cat]} <span class="pub-count">(${items.length})</span>`;
     container.appendChild(h);
 
-    items.forEach(s => {
-      const row = document.createElement("div");
-      row.className = "student-row";
-      const statusTag = s.Status === "Awarded" ? `<span class="type-tag awarded">Awarded</span>` : "";
-      const topic = s["Research Area / Thesis Title"];
-      const thesisLink = s["Thesis Link"] ? String(s["Thesis Link"]).trim() : "";
-      const topicHtml = topic
-        ? (thesisLink ? `<a href="${thesisLink}" target="_blank" rel="noopener">${topic}</a>` : topic)
-        : "";
-      const imgName = s.Image ? String(s.Image).trim() : "";
-      const initials = String(s.Name || "").split(/\s+/).map(w => w[0]).slice(0, 2).join("").toUpperCase();
-      const photoHtml = imgName
-        ? `<img class="student-photo" src="assets/students/${imgName}" alt="${s.Name}">`
-        : `<div class="student-photo student-photo-fallback">${initials}</div>`;
-
-      row.innerHTML = `
-        ${photoHtml}
-        <div class="student-body">
-          <div class="student-row-top">
-            <div class="student-name">${s.Name}</div>
-            <div class="student-tags">
-              <span class="type-tag tag-${String(s.Category||'').toLowerCase().replace(/\s+/g,'')}">${s.Program}</span>
-              ${statusTag}
-            </div>
-          </div>
-          ${topicHtml ? `<div class="student-topic">${topicHtml}</div>` : ""}
-          <div class="student-meta">
-            ${s.Year ? `<span>${s.Year}</span>` : ""}
-            ${s.Affiliation ? `<span>${s.Affiliation}</span>` : ""}
-            ${s.Notes ? `<span class="student-notes">${s.Notes}</span>` : ""}
-          </div>
-        </div>
-      `;
-      container.appendChild(row);
-    });
+    const wide = (mode !== "current" && cat === "PhD");
+    const grid = document.createElement("div");
+    grid.className = "student-grid" + (wide ? " one-col" : " two-col");
+    grid.innerHTML = items.map(s => studentCardHtml(s, wide)).join("");
+    container.appendChild(grid);
   });
 
   if (!any){
@@ -505,7 +562,8 @@ function newsItemHtml(n){
   const headline = n.Link
     ? `<a href="${n.Link}" target="_blank" rel="noopener">${n.Headline}</a>`
     : n.Headline;
-  return `<li><span class="news-type">${n.Type}</span> <i>${headline}</i> ${n.Detail}</li>`;
+  const slug = String(n.Type||"").trim().toLowerCase();
+  return `<li><span class="news-tag nt-${slug}">[${n.Type}]</span><span class="news-body"><i>${headline}</i> ${n.Detail}</span></li>`;
 }
 
 function renderNewsFull(rows){
@@ -535,7 +593,8 @@ function renderNewsPreview(rows, count){
     const headline = n.Link
       ? `<a href="${n.Link}" target="_blank" rel="noopener">${n.Headline}</a>`
       : `<span class="u-head">${n.Headline}</span>`;
-    return `<li class="update-item"><span class="u-type">${n.Type}</span><div class="u-body">${headline} <span class="u-detail">${n.Detail}</span></div></li>`;
+    const slug = String(n.Type||"").trim().toLowerCase();
+    return `<li class="update-item"><span class="u-type nt-${slug}">[${n.Type}]</span><div class="u-body">${headline} <span class="u-detail">${n.Detail}</span></div></li>`;
   };
   container.innerHTML = `
     <ul class="updates-list">${recent.map(itemHtml).join("")}</ul>
@@ -584,7 +643,7 @@ function renderMetricsChart(rows){
     <div class="metrics-chart-wrap">
       <canvas id="metrics-canvas" height="120"></canvas>
     </div>
-    <div class="metrics-source-note">Auto-generated from data/metrics.xlsx</div>
+    <div class="metrics-source-note">Based on Google Scholar data</div>
   `;
   const ctx = document.getElementById("metrics-canvas").getContext("2d");
   new Chart(ctx, {
@@ -616,6 +675,7 @@ function renderMetricsChart(rows){
     },
     options: {
       responsive: true,
+      maintainAspectRatio: false,
       interaction: { mode: "index", intersect: false },
       plugins: {
         legend: { position: "bottom", labels: { boxWidth: 14, usePointStyle: true } }
