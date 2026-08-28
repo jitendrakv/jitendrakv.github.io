@@ -15,16 +15,30 @@ document.addEventListener("DOMContentLoaded", () => {
    Status itself is never displayed — it's a filter only.
    ============================================================ */
 const PUB_URL = "data/publications.xlsx";
-const VISIBLE_STATUSES = ["Published", "Accepted", "Preprint"];
-const PUB_TYPES = ["Journals", "Conferences", "Books", "Book Chapters", "Reports"];
+const PUB_TYPES = ["Journals", "Conferences", "Books", "Chapters", "Technical Reports"];
 const PUB_TYPE_SINGULAR = {
   "Journals": "Journal", "Conferences": "Conference", "Books": "Book",
-  "Book Chapters": "Book Chapter", "Reports": "Report"
+  "Chapters": "Book Chapter", "Technical Reports": "Report"
 };
 const PUB_TYPE_CLASS = {
   "Journals": "tag-journal", "Conferences": "tag-conference", "Books": "tag-book",
-  "Book Chapters": "tag-bookchapter", "Reports": "tag-report"
+  "Chapters": "tag-bookchapter", "Technical Reports": "tag-report"
 };
+
+// Show published/accepted/preprint (and Books/Reports which carry no status);
+// hide in-progress statuses like "In Review" / "Revision Submitted".
+function pubVisible(type, row){
+  if (type === "Books" || type === "Technical Reports") return true;
+  const s = String(row.Status || "").trim();
+  if (!s) return true;
+  return /^(published|accepted|preprint)/i.test(s);
+}
+function statusLabel(s){
+  s = String(s || "").trim();
+  if (!s || /^published/i.test(s)) return "";
+  if (/^(accepted|preprint)/i.test(s)) return s;
+  return "";
+}
 
 function cleanNum(v){
   if (v === "" || v === null || v === undefined) return null;
@@ -34,53 +48,56 @@ function cleanNum(v){
 
 function formatEntry(type, row){
   const year = row.Year || "";
-  let authors, title, venueCore;
+  const url = row.URL ? String(row.URL).trim() : "";
+  const pages = (() => {
+    const s = row.PageStart, e = row.PageEnd;
+    if (s && e) return "pp. " + s + "\u2013" + e;
+    if (s) return "pp. " + s;
+    return "";
+  })();
+  let authors, title, venueCore, statusNote = "";
 
   if (type === "Journals"){
     authors = row.Authors; title = row.Title;
-    const vnp = [];
-    if (row.Volume) vnp.push("Vol. " + row.Volume);
-    if (row.Number) vnp.push("No. " + row.Number);
     const rest = [];
-    if (vnp.length) rest.push(vnp.join(", "));
-    if (row.Pages) rest.push(row.Pages);
-    venueCore = `<b>${row.Journal || ""}</b>` + (rest.length ? " · " + rest.join(" · ") : "");
+    if (row.Volume) rest.push("Vol. " + row.Volume);
+    if (pages) rest.push(pages);
+    venueCore = `<b>${row.Journal || ""}</b>` + (rest.length ? " \u00b7 " + rest.join(" \u00b7 ") : "");
+    statusNote = statusLabel(row.Status);
   } else if (type === "Conferences"){
     authors = row.Authors; title = row.Title;
     const rest = [];
-    if (row.Place) rest.push(row.Place);
-    if (row.Pages) rest.push("pp. " + row.Pages);
-    venueCore = `<b>${row.Conference || ""}</b>` + (rest.length ? " · " + rest.join(" · ") : "");
+    if (pages) rest.push(pages);
+    venueCore = `<b>${row.ConferenceName || ""}</b>` + (rest.length ? " \u00b7 " + rest.join(" \u00b7 ") : "");
+    statusNote = statusLabel(row.Status);
   } else if (type === "Books"){
-    authors = row["Authors/Editors"]; title = row.Title;
+    const isEd = String(row.IsEditor || "").trim().toLowerCase() === "yes";
+    authors = (row.Authors || "") + (isEd ? " (eds.)" : "");
+    title = row.Title;
     const rest = [];
     if (row.Edition) rest.push(row.Edition + " Edition");
-    venueCore = `<b>${row.Publisher || ""}</b>` + (rest.length ? " · " + rest.join(" · ") : "");
-  } else if (type === "Book Chapters"){
-    authors = row.Authors; title = row["Chapter Title"];
-    const rest = [];
-    if (row.Pages) rest.push("pp. " + row.Pages);
-    venueCore = "in " + `<b>${row["Book Title"] || ""}</b>` + (row.Publisher ? " · " + row.Publisher : "") + (rest.length ? " · " + rest.join(" · ") : "");
-  } else if (type === "Reports"){
+    venueCore = `<b>${row.Publisher || ""}</b>` + (rest.length ? " \u00b7 " + rest.join(" \u00b7 ") : "");
+    statusNote = row["Status/Note"] ? String(row["Status/Note"]).trim() : "";
+  } else if (type === "Chapters"){
     authors = row.Authors; title = row.Title;
     const rest = [];
-    if (row.Identifier) rest.push(row.Identifier);
-    venueCore = `<b>${row.Repository || ""}</b>` + (rest.length ? " · " + rest.join(" · ") : "");
+    if (pages) rest.push(pages);
+    venueCore = "in " + `<b>${row.BookTitle || ""}</b>` + (row.Publisher ? " \u00b7 " + row.Publisher : "") + (rest.length ? " \u00b7 " + rest.join(" \u00b7 ") : "");
+    statusNote = statusLabel(row.Status);
+  } else if (type === "Technical Reports"){
+    authors = row.Authors; title = row.Title;
+    venueCore = `<b>${row.Source || ""}</b>`;
   }
 
-  const link = row.Link ? String(row.Link).trim() : "";
-  const titleHtml = link
-    ? `<a href="${link}" target="_blank" rel="noopener">${title}</a>`
-    : title;
-
-  const venueHtml = venueCore + (year ? " · " + year : "");
-  return { authors, title: titleHtml, venueHtml, venueCore, year: cleanNum(year) || 0 };
+  const titleHtml = url ? `<a href="${url}" target="_blank" rel="noopener">${title}</a>` : title;
+  const venueHtml = venueCore + (year ? " \u00b7 " + year : "");
+  return { authors, title: titleHtml, venueCore, venueHtml, year: cleanNum(year) || 0, statusNote };
 }
 
 function badgesHtml(row){
   const badges = [];
   if (row.Indexing) badges.push(`<span class="badge idx">${row.Indexing}</span>`);
-  const ifNum = cleanNum(row["Impact Factor"]);
+  const ifNum = cleanNum(row.ImpactFactor);
   if (ifNum !== null) badges.push(`<span class="badge if">IF ${ifNum}</span>`);
   const q = String(row.Quartile || "").trim().toUpperCase();
   if (q === "Q1") badges.push(`<span class="badge q1">Q1</span>`);
@@ -100,7 +117,7 @@ async function loadPublications(){
   PUB_TYPES.forEach(type => {
     if (!wb.SheetNames.includes(type)) { data[type] = []; return; }
     const rows = XLSX.utils.sheet_to_json(wb.Sheets[type], { defval: "" });
-    data[type] = rows.filter(r => VISIBLE_STATUSES.includes(String(r.Status || "").trim()));
+    data[type] = rows.filter(r => pubVisible(type, r));
   });
   return data;
 }
@@ -117,7 +134,7 @@ function renderPublicationsPage(data){
   function matches(type, row){
     if (!query) return true;
     const f = formatEntry(type, row);
-    const hay = (f.authors + " " + f.title + " " + (row.Journal || row.Conference || row.Publisher || row.Repository || "")).toLowerCase();
+    const hay = (f.authors + " " + f.title + " " + (row.Journal || row.ConferenceName || row.Publisher || row.Source || row.BookTitle || "")).toLowerCase();
     return hay.includes(query);
   }
 
@@ -155,9 +172,9 @@ function renderPublicationsPage(data){
       const f = formatEntry(type, row);
       const rowEl = document.createElement("div");
       rowEl.className = "pub-card-v";
-      const pvLink = row.Link ? String(row.Link).trim() : "";
-      const pvLinkLabel = type === "Books" ? "Publisher" : (type === "Reports" ? "Link" : "DOI");
-      const pvVenue = f.venueCore + (f.year ? " · " + f.year : "") + (row["Other Info"] ? " · " + row["Other Info"] : "");
+      const pvLink = row.URL ? String(row.URL).trim() : "";
+      const pvLinkLabel = type === "Books" ? "Publisher" : (type === "Technical Reports" ? "Link" : "DOI");
+      const pvVenue = f.venueCore + (f.year ? " \u00b7 " + f.year : "") + (f.statusNote ? ` \u00b7 <span class="pv-status">${f.statusNote}</span>` : "");
       rowEl.innerHTML = `
         <div class="pv-spine ${PUB_TYPE_CLASS[type]}">${PUB_TYPE_SINGULAR[type]}</div>
         <div class="pv-main">

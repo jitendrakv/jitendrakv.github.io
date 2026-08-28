@@ -280,6 +280,7 @@ footer a{ color:var(--faint); }
 .pv-venue{ font-size:12.5px; color:var(--dim); margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .pv-venue b{ color:var(--dim); font-weight:600; }
 .pv-doi{ align-self:flex-end; flex:0 0 auto; font-family:var(--mono); font-size:12px; color:var(--accent-dark); text-decoration:none; font-weight:600; white-space:nowrap; }
+.pv-status{ color:var(--accent-dark); font-style:italic; }
 .no-results{ color:var(--faint); font-style:italic; padding:50px 0; text-align:center; }
 .pub-loading{ color:var(--faint); font-size:14.5px; padding:28px 0; }
 .pub-loading.pub-error{ color:#c0392b; background:#fdecea; padding:18px 22px; border-radius:var(--radius-sm); }
