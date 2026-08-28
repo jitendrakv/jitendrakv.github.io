@@ -1,4 +1,108 @@
 // Mobile nav toggle
+/* ---------------- Recognition & Service ---------------- */
+async function loadWorkbookSheets(url){
+  const res = await fetch(url);
+  if (!res.ok) throw new Error("Could not load " + url + " (HTTP " + res.status + ")");
+  const buf = await res.arrayBuffer();
+  const wb = XLSX.read(buf, { type: "array" });
+  const out = {};
+  wb.SheetNames.forEach(n => { out[n] = XLSX.utils.sheet_to_json(wb.Sheets[n], { defval: "" }); });
+  return out;
+}
+
+function svcHide(id){ const el = document.getElementById(id); if (el) el.style.display = "none"; }
+
+function renderSvcAwards(rows){
+  const el = document.getElementById("svc-awards");
+  if (!el) return;
+  rows = (rows || []).filter(r => String(r.Title || "").trim());
+  if (!rows.length){ svcHide("block-awards"); return; }
+  rows.sort((a, b) => (Number(b.Year) || 0) - (Number(a.Year) || 0));
+  document.getElementById("cnt-awards").textContent = `(${rows.length})`;
+  el.innerHTML = rows.map(a => `
+    <div class="svc-award">
+      <div class="svc-medal">\ud83c\udfc5</div>
+      <div>
+        <div class="svc-aw-year">${a.Year || ""}</div>
+        <div class="svc-aw-title">${a.Title || ""}</div>
+        ${a.Description ? `<div class="svc-aw-sub">${a.Description}</div>` : ""}
+      </div>
+    </div>`).join("");
+}
+
+function renderSvcTalks(rows){
+  const el = document.getElementById("svc-talks");
+  if (!el) return;
+  rows = (rows || []).filter(r => String(r.Title || "").trim());
+  if (!rows.length){ svcHide("block-talks"); return; }
+  rows.sort((a, b) => (Number(b.Year) || 0) - (Number(a.Year) || 0));
+  document.getElementById("cnt-talks").textContent = `(${rows.length})`;
+  el.innerHTML = rows.map(t => {
+    const when = t.Date || t.Year || "";
+    const link = t.Link ? String(t.Link).trim() : "";
+    const title = link ? `<a href="${link}" target="_blank" rel="noopener">${t.Title}</a>` : t.Title;
+    return `
+    <div class="svc-card svc-talk">
+      <div class="svc-c-top"><span class="svc-c-title">${title}</span>${when ? `<span class="svc-c-when">${when}</span>` : ""}</div>
+      ${t.Venue ? `<div class="svc-c-sub">${t.Venue}</div>` : ""}
+    </div>`;
+  }).join("");
+}
+
+function renderSvcEditorial(rows){
+  const el = document.getElementById("svc-editorial");
+  if (!el) return;
+  rows = (rows || []).filter(r => String(r.Title || "").trim());
+  if (!rows.length){ svcHide("block-editorial"); return; }
+  rows.sort((a, b) => (Number(b.Year) || 0) - (Number(a.Year) || 0));
+  document.getElementById("cnt-editorial").textContent = `(${rows.length})`;
+  el.innerHTML = rows.map(e => {
+    const link = e.Link ? String(e.Link).trim() : "";
+    const title = link ? `<a href="${link}" target="_blank" rel="noopener">${e.Title}</a>` : e.Title;
+    return `
+    <div class="svc-card svc-editorial">
+      ${e.Role ? `<div class="svc-c-role">${e.Role}</div>` : ""}
+      <div class="svc-c-title">${title}</div>
+      ${e.Venue ? `<div class="svc-c-sub">${e.Venue}</div>` : ""}
+    </div>`;
+  }).join("");
+}
+
+function renderSvcPanels(editor, reviewer, members){
+  const el = document.getElementById("svc-panels");
+  if (!el) return;
+  function chipPanel(cls, title, rows, highlight){
+    rows = (rows || []).filter(r => String(r.Name || "").trim());
+    if (!rows.length) return "";
+    const chips = rows.map(r => {
+      const strong = highlight && String(r.Highlight || "").trim().toLowerCase() === "yes";
+      return `<span class="svc-chip${strong ? " strong" : ""}">${r.Name}</span>`;
+    }).join("");
+    return `<div class="svc-panel ${cls}"><h3>${title}</h3><div class="svc-chips">${chips}</div></div>`;
+  }
+  const html = chipPanel("svc-p-editor", "Editor for", editor, false)
+             + chipPanel("svc-p-reviewer", "Reviewer for", reviewer, false)
+             + chipPanel("svc-p-member", "Memberships", members, true);
+  if (!html){ svcHide("block-service"); return; }
+  el.innerHTML = html;
+}
+
+async function initServices(){
+  const root = document.getElementById("services-root");
+  if (!root) return;
+  try{ renderSvcAwards(await loadSheet("data/awards.xlsx", "Awards")); }
+  catch(err){ svcHide("block-awards"); console.error(err); }
+  try{
+    const sh = await loadWorkbookSheets("data/service.xlsx");
+    renderSvcTalks(sh.Talks || []);
+    renderSvcEditorial(sh.Editorial || []);
+    renderSvcPanels(sh.Editor || [], sh.Reviewer || [], sh.Memberships || []);
+  }catch(err){
+    ["block-talks","block-editorial","block-service"].forEach(svcHide);
+    console.error(err);
+  }
+}
+
 document.addEventListener("DOMContentLoaded", () => {
   const toggle = document.querySelector(".nav-toggle");
   const links = document.querySelector(".nav-links");
@@ -331,9 +435,11 @@ function studentCardHtml(s, wide){
     : "";
   const imgName = s.Image ? String(s.Image).trim() : "";
   const initials = String(s.Name || "").split(/\s+/).map(w => w[0]).slice(0, 2).join("").toUpperCase();
-  const avatar = imgName
-    ? `<img class="s-avatar" src="assets/students/${imgName}" alt="${s.Name}">`
-    : `<div class="s-avatar s-avatar-fallback">${initials}</div>`;
+  // Always render the initials avatar; overlay the photo when a filename is set.
+  // If the file is missing or fails to load, onerror removes the img and the avatar shows through.
+  const avatar = `<div class="s-avatar s-avatar-fallback">${initials}` +
+    (imgName ? `<img class="s-avatar-img" src="assets/students/${imgName}" alt="${s.Name}" loading="lazy" onerror="this.remove()">` : "") +
+    `</div>`;
   const sub = [s.Program, studentYearLabel(s)].filter(Boolean).join(" \u00b7 ");
   const tip = [s.SupervisionTags, s.Notes].filter(Boolean).join(" \u00b7 ");
   const titleAttr = tip ? ` title="${escAttr(tip)}"` : "";
@@ -762,4 +868,5 @@ document.addEventListener("DOMContentLoaded", () => {
   initMetrics();
   initBioToggle();
   initProtectedGate();
+  initServices();
 });

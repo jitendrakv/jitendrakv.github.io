@@ -319,6 +319,8 @@ footer a{ color:var(--faint); }
 .cat-undergraduate{ --cat:var(--sc-undergraduate); } .cat-researchintern{ --cat:var(--sc-researchintern); }
 .s-avatar{ width:40px; height:40px; border-radius:50%; object-fit:cover; flex-shrink:0; border:2px solid var(--cat); }
 .s-avatar-fallback{ display:flex; align-items:center; justify-content:center; background:#f3f0ee; color:var(--dim); font-family:var(--serif); font-weight:700; font-size:13px; }
+.s-avatar-fallback{ position:relative; overflow:hidden; }
+.s-avatar-img{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
 .s-body{ flex:1; min-width:0; }
 .s-name{ font-size:13.5px; font-weight:700; color:var(--ink); line-height:1.3; }
 .s-awd{ display:inline-block; font-family:var(--mono); font-size:9.5px; font-weight:600; text-transform:uppercase; background:var(--amber); color:var(--accent); padding:1px 6px; border-radius:4px; margin-left:6px; vertical-align:middle; }
@@ -367,6 +369,41 @@ footer a{ color:var(--faint); }
 .award-year{ font-size:13.5px; font-weight:700; color:var(--accent-dark); }
 .award-box h3{ font-size:18px; margin:6px 0; }
 .award-box p{ color:var(--dim); font-size:14.5px; margin:0; }
+
+/* ===== Recognition & Service page ===== */
+.svc-block{ margin-bottom:34px; }
+.svc-sechead{ font-family:var(--serif); font-size:20px; font-weight:700; margin:0 0 16px; padding-bottom:10px; border-bottom:3px solid var(--amber); display:inline-flex; align-items:center; gap:10px; }
+.svc-cnt{ color:var(--faint); font-family:var(--sans); font-size:13px; font-weight:400; }
+.svc-grid2{ display:grid; grid-template-columns:repeat(2,1fr); gap:14px; }
+.svc-card{ background:var(--panel); border:1px solid var(--line); border-left:3px solid var(--edge,var(--accent)); border-radius:var(--radius-sm); padding:15px 18px; transition:box-shadow .15s ease; }
+.svc-card:hover{ box-shadow:var(--shadow-hover); }
+.svc-talk{ --edge:#6a1b9a; }
+.svc-editorial{ --edge:#2e7d32; }
+.svc-c-top{ display:flex; justify-content:space-between; align-items:baseline; gap:12px; }
+.svc-c-title{ font-size:14.5px; font-weight:600; color:var(--ink); line-height:1.4; }
+.svc-c-title a{ color:var(--ink); }
+.svc-c-title a:hover{ color:var(--accent-dark); }
+.svc-c-when{ font-family:var(--mono); font-size:11.5px; color:var(--faint); white-space:nowrap; flex-shrink:0; }
+.svc-c-sub{ font-size:12.5px; color:var(--dim); margin-top:4px; }
+.svc-c-role{ display:inline-block; font-family:var(--mono); font-size:10.5px; font-weight:600; text-transform:uppercase; letter-spacing:.03em; color:var(--edge); margin-bottom:4px; }
+.svc-award{ display:flex; gap:14px; align-items:flex-start; background:var(--panel); border:1px solid var(--line); border-left:3px solid #b8860b; border-radius:var(--radius-sm); padding:15px 18px; transition:box-shadow .15s ease; }
+.svc-award:hover{ box-shadow:var(--shadow-hover); }
+.svc-medal{ font-size:26px; flex-shrink:0; line-height:1; }
+.svc-aw-year{ font-family:var(--mono); font-size:11.5px; color:#b8860b; font-weight:600; }
+.svc-aw-title{ font-size:14.5px; font-weight:700; margin:2px 0 3px; }
+.svc-aw-sub{ font-size:12.5px; color:var(--dim); }
+.svc-panels{ display:grid; grid-template-columns:repeat(3,1fr); gap:14px; align-items:start; }
+.svc-panel{ background:var(--panel); border:1px solid var(--line); border-top:3px solid var(--edge,var(--accent)); border-radius:var(--radius); padding:16px 18px; }
+.svc-panel h3{ font-family:var(--sans); font-size:12.5px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; margin:0 0 12px; color:var(--edge,var(--accent)); }
+.svc-p-editor{ --edge:#c2410c; }
+.svc-p-reviewer{ --edge:#1565c0; }
+.svc-p-member{ --edge:var(--accent); }
+.svc-chips{ display:flex; flex-wrap:wrap; gap:7px; }
+.svc-chip{ font-size:12px; padding:5px 11px; border-radius:16px; background:var(--accent-tint); color:var(--ink); font-weight:500; border:1px solid var(--line-2); }
+.svc-chip.strong{ background:var(--edge,var(--accent)); color:#fff; border-color:var(--edge,var(--accent)); font-weight:600; }
+@media(max-width:900px){ .svc-panels{ grid-template-columns:repeat(2,1fr); } }
+@media(max-width:760px){ .svc-grid2{ grid-template-columns:1fr; } }
+@media(max-width:600px){ .svc-panels{ grid-template-columns:1fr; } }
 
 /* ---------------- Teaching ---------------- */
 .teaching-block{ background:var(--panel); border:1px solid var(--line); box-shadow:var(--shadow); border-radius:var(--radius); padding:26px 28px; margin-bottom:24px; }
