@@ -681,12 +681,30 @@ function initTeaching(){
 }
 
 /* ---------------- News ---------------- */
+const NEWS_GROUPS = {
+  publication: { types:["publication"], label:"Publication",
+    svg:'<svg class="news-ico-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M8.5 13h7"/><path d="M8.5 16.5h4.5"/></svg>' },
+  editorial: { types:["editorial","call for papers"], label:"Editorial / Call for Papers",
+    svg:'<svg class="news-ico-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m3 11 18-5v12L3 14z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg>' },
+  talk: { types:["invited talk","invited talk/lecture","talk","lecture"], label:"Invited Talk",
+    svg:'<svg class="news-ico-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="22"/></svg>' },
+  update: { types:["update","news update"], label:"News Update",
+    svg:'<svg class="news-ico-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>' }
+};
+function newsGroupFor(type){
+  const t = String(type||"").trim().toLowerCase();
+  for (const key in NEWS_GROUPS){ if (NEWS_GROUPS[key].types.includes(t)) return key; }
+  return "update";
+}
 function newsItemHtml(n){
   const headline = n.Link
     ? `<a href="${n.Link}" target="_blank" rel="noopener">${n.Headline}</a>`
     : n.Headline;
-  const slug = String(n.Type||"").trim().toLowerCase();
-  return `<li><span class="news-tag nt-${slug}">[${n.Type}]</span><span class="news-body"><i>${headline}</i> ${n.Detail}</span></li>`;
+  const gk = newsGroupFor(n.Type);
+  const g = NEWS_GROUPS[gk];
+  const label = String(n.Type || g.label).trim();
+  const detail = n.Detail ? ` ${n.Detail}` : "";
+  return `<li><span class="news-tag nt-${gk}" role="img" aria-label="${label}" title="${label}">${g.svg}</span><span class="news-body"><i>${headline}</i>${detail}</span></li>`;
 }
 
 function renderNewsFull(rows){
@@ -705,23 +723,33 @@ function renderNewsPreview(rows, count){
   const container = document.getElementById("news-preview");
   if (!container) return;
 
-  // Home page "Updates": auto-scrolling ticker (marquee, bottom-to-top) of the most recent items.
+  // Home page "Recent Announcements": auto-scrolling marquee (bottom-to-top) of the most recent items.
   rows.sort((a, b) => (Number(b.Year) || 0) - (Number(a.Year) || 0));
   const recent = rows.slice(0, count);
   if (!recent.length){
     container.innerHTML = `<div class="no-results">No updates yet.</div>`;
     return;
   }
-  const itemHtml = (n) => {
+  const itemHtml = (n, dup) => {
     const headline = n.Link
       ? `<a href="${n.Link}" target="_blank" rel="noopener">${n.Headline}</a>`
       : `<span class="u-head">${n.Headline}</span>`;
-    const slug = String(n.Type||"").trim().toLowerCase();
-    return `<li class="update-item"><span class="u-type nt-${slug}">[${n.Type}]</span><div class="u-body">${headline} <span class="u-detail">${n.Detail}</span></div></li>`;
+    const gk = newsGroupFor(n.Type);
+    const g = NEWS_GROUPS[gk];
+    const label = String(n.Type || g.label).trim();
+    const detail = n.Detail ? ` <span class="u-detail">${n.Detail}</span>` : "";
+    const cls = dup ? "news-ticker-item news-ticker-item--dup" : "news-ticker-item";
+    const extra = dup ? ' aria-hidden="true"' : ` role="img" aria-label="${label}"`;
+    return `<li class="${cls}"${extra}><span class="news-tag nt-${gk}"${dup ? '' : ' role="img" aria-label="'+label+'"'} title="${label}">${g.svg}</span><div class="u-body">${headline}${detail}</div></li>`;
   };
+  const items = recent.map(n => itemHtml(n, false)).join("");
+  const itemsDup = recent.map(n => itemHtml(n, true)).join("");
+  const dur = Math.max(20, recent.length * 5); // seconds per loop — slow, human-readable
   container.innerHTML = `
-    <ul class="updates-list">${recent.map(itemHtml).join("")}</ul>
-    <div class="page-links" style="margin-top:18px;"><a href="news.html">Show more...</a></div>
+    <div class="news-ticker">
+      <ul class="news-ticker-track" style="animation-duration:${dur}s">${items}${itemsDup}</ul>
+    </div>
+    <div class="page-links" style="margin-top:14px;"><a href="news.html">Show more...</a></div>
   `;
 }
 
@@ -732,7 +760,7 @@ function initNews(){
   const target = full || preview;
   withLoading(target, () => loadSheet("data/news.xlsx", "News"), (rows) => {
     if (full) renderNewsFull(rows.slice());
-    if (preview) renderNewsPreview(rows.slice(), 4);
+    if (preview) renderNewsPreview(rows.slice(), 5);
   }, "news");
 }
 
