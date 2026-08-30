@@ -573,12 +573,10 @@ function renderExperience(rows, opts = {}){
 
   rows.sort((a, b) => (Number(b.Year) || 0) - (Number(a.Year) || 0));
 
-  // group consecutive rows by year
   const years = [];
   rows.forEach(r => {
-    const y = r.Year;
-    let bucket = years.find(g => g.year === y);
-    if (!bucket){ bucket = { year: y, items: [] }; years.push(bucket); }
+    let bucket = years.find(g => g.year === r.Year);
+    if (!bucket){ bucket = { year: r.Year, items: [] }; years.push(bucket); }
     bucket.items.push(r);
   });
 
@@ -587,18 +585,21 @@ function renderExperience(rows, opts = {}){
 
   function itemsHtml(list){
     return list.map(g => `
-      <div class="tl-item">
-        <div class="tl-date">${g.year}</div>
-        ${g.items.map(it => `
-          <h3>${it.Title}</h3>
-          ${it.Institution ? `<div class="tl-org">${it.Institution}</div>` : ""}
-          ${it.Note ? `<div class="tl-detail">${it.Note}</div>` : ""}
-        `).join("")}
-      </div>
-    `).join("");
+      <div class="xp-item">
+        <span class="xp-dot"></span>
+        <div class="xp-year">${g.year}</div>
+        <div class="xp-card">
+          ${g.items.map(it => `
+            <div class="xp-entry">
+              <div class="xp-role">${it.Title}</div>
+              ${it.Institution ? `<div class="xp-org">${it.Institution}</div>` : ""}
+              ${it.Note ? `<div class="xp-note">${it.Note}</div>` : ""}
+            </div>`).join("")}
+        </div>
+      </div>`).join("");
   }
 
-  container.innerHTML = `<div class="timeline">${itemsHtml(shown)}</div>`;
+  container.innerHTML = `<div class="xp-timeline">${itemsHtml(shown)}</div>`;
 
   if (hidden.length){
     const btn = document.createElement("button");
@@ -607,7 +608,7 @@ function renderExperience(rows, opts = {}){
     let expanded = false;
     btn.addEventListener("click", () => {
       expanded = !expanded;
-      container.querySelector(".timeline").innerHTML = itemsHtml(expanded ? years : shown);
+      container.querySelector(".xp-timeline").innerHTML = itemsHtml(expanded ? years : shown);
       btn.textContent = expanded ? "Show less..." : "Show more...";
     });
     container.appendChild(btn);
