@@ -80,9 +80,9 @@ function renderSvcPanels(editor, reviewer, members){
     }).join("");
     return `<div class="svc-panel ${cls}"><h3>${title}</h3><div class="svc-chips">${chips}</div></div>`;
   }
-  const html = chipPanel("svc-p-editor", "Editor for", editor, false)
-             + chipPanel("svc-p-reviewer", "Reviewer for", reviewer, false)
-             + chipPanel("svc-p-member", "Memberships", members, true);
+  const html = chipPanel("svc-p-editor", "Editorial Board Member", editor, false)
+             + chipPanel("svc-p-reviewer", "Technical Committee Member", reviewer, false)
+             + chipPanel("svc-p-member", "SocietyMemberships", members, true);
   if (!html){ svcHide("block-service"); return; }
   el.innerHTML = html;
 }
@@ -653,24 +653,78 @@ function renderTeaching(rows){
   const container = document.getElementById("teaching-list");
   if (!container) return;
 
-  const current = rows.filter(r => r.Status === "Current");
-  const previous = rows.filter(r => r.Status !== "Current");
+  const lock = '<svg class="notes-lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>';
 
-  const byInst = {};
-  previous.forEach(r => {
-    const inst = r.Institution || "Other";
-    if (!byInst[inst]) byInst[inst] = [];
-    byInst[inst].push(r.Course);
+  // Aggregate one row per OFFERING into one entry per COURSE.
+  const order = [], map = {};
+  rows.forEach(r => {
+    const key = String(r.Course || "").trim();
+    if (!key) return;
+    if (!map[key]){ map[key] = { course: key, levels: new Set(), offers: [], current: false, notes: [] }; order.push(key); }
+    const c = map[key];
+    const level = String(r.Level || "").trim().toUpperCase();
+    if (level) c.levels.add(level);
+    if (r.Status === "Current") c.current = true;
+    c.offers.push(r);
+    const url = String(r.Notes || "").trim();
+    if (url && !c.notes.some(n => n.url === url)) c.notes.push({ url: url, level: level });
   });
+
+  const levelTag = lv => {
+    const cls = lv === "PG" ? "lvl-pg" : (lv === "UG" ? "lvl-ug" : "");
+    return `<span class="course-level ${cls}">${lv}</span>`;
+  };
+
+  const card = (c) => {
+    const lvls = ["UG", "PG"].filter(l => c.levels.has(l)).map(levelTag).join("")
+      + [...c.levels].filter(l => l !== "UG" && l !== "PG").map(levelTag).join("");
+
+    const byInst = {}, instOrder = [];
+    c.offers.forEach(o => {
+      const inst = o.Institution || "Other";
+      if (!byInst[inst]){ byInst[inst] = []; instOrder.push(inst); }
+      const bit = [String(o.Level || "").trim().toUpperCase(), String(o.Term || "").trim()].filter(Boolean).join(" · ");
+      if (bit) byInst[inst].push(bit);
+    });
+    const offHtml = instOrder.map(inst => {
+      const terms = byInst[inst].join(", ");
+      return `<li><span class="off-inst">${inst}</span>${terms ? ` — <span class="off-terms">${terms}</span>` : ""}</li>`;
+    }).join("");
+
+    // One notes link by default; if the sheet supplies a second (distinct) link, show it too.
+    let notesHtml = "";
+    if (c.notes.length === 1){
+      notesHtml = `<a class="course-notes" href="${c.notes[0].url}" target="_blank" rel="noopener" title="Sign-in required">${lock} Class notes &rarr;</a>`;
+    } else if (c.notes.length > 1){
+      const links = c.notes.map(n => {
+        const label = n.level ? `${n.level} notes` : "Class notes";
+        return `<a class="course-notes" href="${n.url}" target="_blank" rel="noopener" title="Sign-in required">${lock} ${label} &rarr;</a>`;
+      }).join("");
+      notesHtml = `<div class="course-notes-row">${links}</div>`;
+    }
+
+    return `<div class="course-card${c.current ? " course-current" : ""}">
+      <!-- ${c.current ? '<span class="course-badge">Now teaching</span>' : ""} -->
+      <div class="course-top">
+        <span class="course-title">${c.course}</span>
+        ${lvls}
+      </div>
+      <ul class="course-offerings">${offHtml}</ul>
+      ${notesHtml}
+    </div>`;
+  };
+
+  const courses = order.map(k => map[k]);
+  const current = courses.filter(c => c.current);
+  const past = courses.filter(c => !c.current);
 
   let html = "";
   if (current.length){
-    html += `<div class="teaching-block"><h3>Current</h3><ul>${current.map(c => `<li>${c.Course}</li>`).join("")}</ul></div>`;
+    html += `<div class="teach-sec"><h2 class="teach-h">Currently Teaching</h2><div class="course-grid">${current.map(card).join("")}</div></div>`;
   }
-  Object.keys(byInst).forEach(inst => {
-    html += `<div class="teaching-block"><h3>@ ${inst}</h3><ul>${byInst[inst].map(c => `<li>${c}</li>`).join("")}</ul></div>`;
-  });
-
+  if (past.length){
+    html += `<div class="teach-sec"><h2 class="teach-h">Past Courses</h2><div class="course-grid">${past.map(card).join("")}</div></div>`;
+  }
   container.innerHTML = html;
 }
 
@@ -769,17 +823,110 @@ function initNews(){
    line chart with Chart.js — Publications on the left axis, Citations on the right,
    matching the reference site's layout. Falls back to a plain table if Chart.js
    didn't load (e.g. offline / CDN blocked). */
+let METRICS_ROWS = null, metricsFullChart = null;
+
+function drawMetricsChart(canvas, rows, compact){
+  const years = rows.map(r => r.Year);
+  const citations = rows.map(r => Number(r.Citations) || 0);
+  const publications = rows.map(r => Number(r.Publications) || 0);
+  const last = years.length - 1;
+  const MAROON = "#8c4a51", MAROON_SOFT = "rgba(138,31,43,0.30)", STEEL = "#1f5f7a";
+  const f = compact ? 10 : 13;
+  return new Chart(canvas.getContext("2d"), {
+    type: "bar",
+    data: {
+      labels: years,
+      datasets: [
+        {
+          type: "bar", label: "Publications", data: publications, yAxisID: "yPub",
+          backgroundColor: publications.map((_, i) => i === last ? MAROON_SOFT : MAROON),
+          borderColor: MAROON, borderWidth: publications.map((_, i) => i === last ? 1.5 : 0),
+          borderRadius: compact ? 2 : 4, borderSkipped: false,
+          maxBarThickness: compact ? 5 : 30,
+          barPercentage: compact ? 0.55 : 0.9, categoryPercentage: compact ? 0.7 : 0.8, order: 2
+        },
+        {
+          type: "line", label: "Citations", data: citations, yAxisID: "yCit",
+          borderColor: STEEL, backgroundColor: STEEL, pointBackgroundColor: STEEL,
+          pointRadius: publications.map((_, i) => compact ? (i === last ? 3 : 0) : (i === last ? 5 : 3)),
+          pointBorderColor: "#fff", pointBorderWidth: 1,
+          borderWidth: compact ? 1.8 : 2.4, tension: 0.35, order: 1,
+          segment: { borderDash: c => c.p1DataIndex === last ? [5, 4] : undefined }
+        }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      interaction: { mode: "index", intersect: false },
+      plugins: {
+        legend: { position: "bottom", labels: { boxWidth: compact ? 9 : 12, usePointStyle: true, padding: compact ? 8 : 16, font: { size: compact ? 10 : 13 } } },
+        tooltip: { callbacks: { title: it => it[0].label + (it[0].dataIndex === last ? " (year-to-date)" : "") } }
+      },
+      scales: {
+        x: { grid: { display: false }, ticks: { font: { size: f }, maxRotation: 0, autoSkip: true, autoSkipPadding: compact ? 8 : 12, color: "#6a6a6a" } },
+        yPub: {
+          type: "linear", position: "left", beginAtZero: true, suggestedMax: 14,
+          title: { display: !compact, text: "Publications / year", color: MAROON, font: { weight: "600" } },
+          grid: { color: "rgba(0,0,0,0.05)" }, ticks: { stepSize: 2, font: { size: f }, color: "#8a8a8a" }
+        },
+        yCit: {
+          type: "linear", position: "right", beginAtZero: true,
+          title: { display: !compact, text: "Citations / year", color: STEEL, font: { weight: "600" } },
+          grid: { drawOnChartArea: false }, ticks: { font: { size: f }, color: "#8a8a8a", maxTicksLimit: compact ? 5 : 8 }
+        }
+      }
+    }
+  });
+}
+
+function setupMetricsModal(lastYear){
+  if (document.getElementById("metrics-modal")) return;
+  const m = document.createElement("div");
+  m.id = "metrics-modal"; m.className = "metrics-modal"; m.hidden = true;
+  m.innerHTML =
+    '<div class="metrics-modal-backdrop"></div>' +
+    '<div class="metrics-modal-panel" role="dialog" aria-modal="true" aria-label="Citations and publications by year">' +
+      '<button class="metrics-modal-close" aria-label="Close">&times;</button>' +
+      '<div class="metrics-modal-head"><h3>Citations &amp; Publications by Year</h3>' +
+        '<span>Google Scholar · ' + lastYear + ' year-to-date</span></div>' +
+      '<div class="metrics-modal-canvas"><canvas id="metrics-canvas-full"></canvas></div>' +
+    '</div>';
+  document.body.appendChild(m);
+  m.querySelector(".metrics-modal-close").addEventListener("click", closeMetricsModal);
+  m.querySelector(".metrics-modal-backdrop").addEventListener("click", closeMetricsModal);
+  document.addEventListener("keydown", e => { if (e.key === "Escape") closeMetricsModal(); });
+}
+
+function openMetricsModal(){
+  const m = document.getElementById("metrics-modal");
+  if (!m || !METRICS_ROWS) return;
+  m.hidden = false;
+  document.body.style.overflow = "hidden";
+  if (!metricsFullChart){
+    metricsFullChart = drawMetricsChart(document.getElementById("metrics-canvas-full"), METRICS_ROWS, false);
+  } else {
+    metricsFullChart.resize();
+  }
+}
+
+function closeMetricsModal(){
+  const m = document.getElementById("metrics-modal");
+  if (!m) return;
+  m.hidden = true;
+  document.body.style.overflow = "";
+}
+
 function renderMetricsChart(rows){
   const container = document.getElementById("metrics-chart");
   if (!container) return;
   rows.sort((a, b) => (Number(a.Year) || 0) - (Number(b.Year) || 0));
+  METRICS_ROWS = rows;
 
   const years = rows.map(r => r.Year);
   const citations = rows.map(r => Number(r.Citations) || 0);
   const publications = rows.map(r => Number(r.Publications) || 0);
 
   if (typeof Chart === "undefined"){
-    // Offline fallback: simple data table, still fully derived from the xlsx file.
     container.innerHTML = `
       <div class="no-results">Chart library unavailable — showing raw data from metrics.xlsx.</div>
       <table style="width:100%; border-collapse:collapse; margin-top:12px;">
@@ -790,61 +937,12 @@ function renderMetricsChart(rows){
     return;
   }
 
-  container.innerHTML = `
-    <div class="metrics-chart-wrap">
-      <canvas id="metrics-canvas" height="120"></canvas>
-    </div>
-    <div class="metrics-source-note">Based on Google Scholar data</div>
-  `;
-  const ctx = document.getElementById("metrics-canvas").getContext("2d");
-  new Chart(ctx, {
-    type: "line",
-    data: {
-      labels: years,
-      datasets: [
-        {
-          label: "Publications",
-          data: publications,
-          borderColor: "#8a1f2b",
-          backgroundColor: "#8a1f2b",
-          pointBackgroundColor: "#8a1f2b",
-          pointRadius: 4,
-          tension: 0.25,
-          yAxisID: "yPub"
-        },
-        {
-          label: "Citations",
-          data: citations,
-          borderColor: "#7d8590",
-          backgroundColor: "#7d8590",
-          pointBackgroundColor: "#7d8590",
-          pointRadius: 4,
-          tension: 0.25,
-          yAxisID: "yCit"
-        }
-      ]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      interaction: { mode: "index", intersect: false },
-      plugins: {
-        legend: { position: "bottom", labels: { boxWidth: 14, usePointStyle: true } }
-      },
-      scales: {
-        x: { title: { display: true, text: "Year" }, grid: { display: false } },
-        yPub: {
-          type: "linear", position: "left", beginAtZero: true,
-          title: { display: true, text: "Publication (#)" }
-        },
-        yCit: {
-          type: "linear", position: "right", beginAtZero: true,
-          title: { display: true, text: "Citation (#)" },
-          grid: { drawOnChartArea: false }
-        }
-      }
-    }
-  });
+  const lastYear = years[years.length - 1];
+  container.innerHTML = `<canvas id="metrics-canvas"></canvas><span class="chart-expand" aria-hidden="true">&#10530; Enlarge</span>`;
+  drawMetricsChart(document.getElementById("metrics-canvas"), rows, true);
+  setupMetricsModal(lastYear);
+  container.addEventListener("click", openMetricsModal);
+  container.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " "){ e.preventDefault(); openMetricsModal(); } });
 }
 
 function initMetrics(){
