@@ -30,7 +30,7 @@ assets/                         → Photos, social icons, CV
 | File | Powers | Key columns |
 |---|---|---|
 | `data/publications.xlsx` | Publications page + home preview | 5 sheets (Journals/Conferences/Books/Book Chapters/Reports), each with Authors, Title, type-specific venue fields, Year, Status, Indexing, Impact Factor, Quartile, Other Info, Link |
-| `data/students.xlsx` | Both student pages | Category, Name, Program, Year, Research Area/Thesis Title, Status, Affiliation, Notes, Image, Thesis Link |
+| `data/students.xlsx` | Both student pages | Category, Name, Program, Institute, Year, Research Area/Thesis Title, Status, Affiliation, Notes, Image, Thesis Link |
 | `data/experience.xlsx` | Experience page + home timeline preview | Year, Title, Institution, Note |
 | `data/awards.xlsx` | Awards page | Year, Title, Description, Medal |
 | `data/teaching.xlsx` | Teaching page | Institution, Course, Status (Current/Previous) |

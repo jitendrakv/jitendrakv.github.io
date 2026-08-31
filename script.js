@@ -395,6 +395,7 @@ async function loadStudents(){
         Thesis: r["Research Area / Thesis Title"] || "",
         ThesisLink: r["Thesis Link"] || "",
         Affiliation: r["Current Affiliation"] || r["Affiliation"] || "",
+        Institute: r.Institute || "",
         Image: r.Image || "",
         Notes: r.Notes || "",
         SupervisionTags: r["Supervision Tags"] || "",
@@ -425,6 +426,11 @@ function escAttr(v){
   return String(v).replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
 }
 
+function abbrevInstitute(v){
+  const s = String(v || "").replace(/,\s*India$/i, "").trim();
+  return ({ "NIT Tiruchirappalli": "NIT Trichy" })[s] || s;
+}
+
 function studentCardHtml(s, wide){
   const catSlug = String(s.Category||'').toLowerCase().replace(/\s+/g,'');
   const awarded = s.Status === "Awarded" ? `<span class="s-awd">Awarded</span>` : "";
@@ -440,7 +446,9 @@ function studentCardHtml(s, wide){
   const avatar = `<div class="s-avatar s-avatar-fallback">${initials}` +
     (imgName ? `<img class="s-avatar-img" src="assets/students/${imgName}" alt="${s.Name}" loading="lazy" onerror="this.remove()">` : "") +
     `</div>`;
-  const sub = [s.Program, studentYearLabel(s)].filter(Boolean).join(" \u00b7 ");
+  const prog = s.Category === "PhD" ? "" : s.Program;   // PhD already grouped by its section header
+  const sub = [prog, studentYearLabel(s), abbrevInstitute(s.Institute)]
+                .filter(Boolean).join(" \u00b7 ");
   const tip = [s.SupervisionTags, s.Notes].filter(Boolean).join(" \u00b7 ");
   const titleAttr = tip ? ` title="${escAttr(tip)}"` : "";
   const affHtml = s.Affiliation ? `<div class="s-aff"><span class="lab">Next/Now at </span>${s.Affiliation}</div>` : "";
