@@ -447,8 +447,10 @@ function studentCardHtml(s, wide){
     (imgName ? `<img class="s-avatar-img" src="assets/students/${imgName}" alt="${s.Name}" loading="lazy" onerror="this.remove()">` : "") +
     `</div>`;
   const prog = s.Category === "PhD" ? "" : s.Program;   // PhD already grouped by its section header
-  const sub = [prog, studentYearLabel(s), abbrevInstitute(s.Institute)]
-                .filter(Boolean).join(" \u00b7 ");
+const inst = abbrevInstitute(s.Institute);
+const meta = [prog, studentYearLabel(s)].filter(Boolean).join(" \u00b7 ");
+const sub = [meta, inst ? `<span class="s-inst">${escAttr(inst)}</span>` : ""]
+              .filter(Boolean).join(" \u00b7 ");
   const tip = [s.SupervisionTags, s.Notes].filter(Boolean).join(" \u00b7 ");
   const titleAttr = tip ? ` title="${escAttr(tip)}"` : "";
   const affHtml = s.Affiliation ? `<div class="s-aff"><span class="lab">Next/Now at </span>${s.Affiliation}</div>` : "";

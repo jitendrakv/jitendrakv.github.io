@@ -611,7 +611,7 @@ section + section{ border-top:none; }
 .type-tag.tag-phd,.type-tag.tag-masters,.type-tag.tag-undergraduate,.type-tag.tag-researchintern{ background:#8a1f2b; }
 
 .student-photo{ border-color:#8a1f2b; }
-
+.s-inst{ color:var(--accent); }   /* brand red #8a1f2b; use --accent-dark #6d1622 for the deeper tone in the preview */
 /* ========================= HOMEPAGE (body.minimal) ========================= */
 .minimal{ font-size:16px; }
 .minimal h1,.minimal h2,.minimal h3{ font-family:var(--sans); letter-spacing:-0.01em; color:#1a1a1a; }
